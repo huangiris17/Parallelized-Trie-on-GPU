@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <PTrie.hpp>
+#include "PTrie.hpp"
 // #include <cuda_runtime.h>
 
 int main() {
