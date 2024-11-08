@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "*.ejs": "html",
+        "__config": "cpp",
+        "__verbose_abort": "cpp",
+        "cstdio": "cpp",
+        "cstring": "cpp",
+        "locale": "cpp",
+        "iosfwd": "cpp",
+        "vector": "cpp",
+        "__locale": "cpp"
+    }
+}
