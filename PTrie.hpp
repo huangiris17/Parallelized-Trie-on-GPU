@@ -1,3 +1,6 @@
+#ifndef PTRIE_HPP
+#define PTRIE_HPP
+
 #include <vector>
 #include <string>
 #include <iostream>
@@ -14,7 +17,7 @@ struct STT {
 
 class PTrie {
 
-    private: 
+    private:
         STT* cur_STT;
 
     public:
@@ -35,8 +38,10 @@ class PTrie {
         STT* createSTT(int maxStates);
 
         // Insert a pattern into the State Transition Table
-        void insertPattern(char *pattern);
+        void insertPattern(const char *pattern);
 
         // Free all STT resources
         void freeSTT();
 };
+
+#endif

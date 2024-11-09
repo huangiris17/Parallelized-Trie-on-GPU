@@ -2,39 +2,31 @@
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
+#include <string>
 #include <cuda_runtime.h>
+#include "PTrie.hpp"
 
 #define ALPHABET_SIZE 26  // lowercase letters
 
-// Structure for the state transition table (STT)
-struct STT {
-    int numStates;           // Number of states in the STT
-    int maxStates;           // Max number of states in the STT
-    int **table;             // 2D table for storing state transitions
-};
+__global__ void searchKernel(STT *d_stt, char *text, int *d_match_count, int textSize);
+void printTable(int** table, int numStates);
 
-
-class PTrie {
-
-    private: 
-    STT* cur_STT;
-
-    public:
     // Constructor
-    PTrie(const std::vector<std::string>& patterns) {
+    PTrie::PTrie(const std::vector<std::string>& patterns) {
         int maxState = calculateMaxStates(patterns);
         // Create empty STT
         cur_STT = createSTT(maxState);
         cur_STT->maxStates = maxState;
 
-        // Insert patters into STT
+        // Insert patterns into STT
         for (const std::string& pattern : patterns) {
-            insertPattern(cur_STT, pattern.c_str());
+            insertPattern( pattern.c_str());
         }
+	//printTable(cur_STT->table, cur_STT->numStates);
     }
 
     // Wrapper function to launch kernel and perform matching
-    int search(const char *text, int textSize) {
+    int PTrie::search(const char *text, int textSize) {
         // Allocate device memory
         STT *d_stt;
         char *d_text;
@@ -56,7 +48,7 @@ class PTrie {
         // Deep copy STT from host to device
         // Allocate device memory for the table (array of pointers)
         int **d_table;  // a pointer to a pointer of type int
-        cudaMalloc(&d_table, cur_STT->numStates * sizeof(int *));  
+        cudaMalloc(&d_table, cur_STT->numStates * sizeof(int *));
         for (int i = 0; i < cur_STT->numStates; i++) {
             int *d_row;  // a pointer declared on CPU that points to a row in GPU used to store an array of int
             cudaMalloc(&d_row, (ALPHABET_SIZE + 1) * sizeof(int));
@@ -73,7 +65,7 @@ class PTrie {
         int blockSize = 256;
         int gridSize = (textSize + blockSize - 1) / blockSize;
         searchKernel<<<gridSize, blockSize>>>(d_stt, d_text, d_match_count, textSize);
-        
+
         // Copy results back to the host
         cudaMemcpy(&match_count, d_match_count, sizeof(int), cudaMemcpyDeviceToHost);
 
@@ -85,14 +77,13 @@ class PTrie {
         return match_count;
     }
 
-    private:
     // Destructor
-    ~PTrie() {
+    PTrie::~PTrie() {
         freeSTT();
     }
 
     // Calculate upper bound of the number of states
-    int calculateMaxStates(const std::vector<std::string>& patterns) {
+    int PTrie::calculateMaxStates(const std::vector<std::string>& patterns) {
         int cnt = 0;
         for (const std::string& pattern : patterns) {
             cnt += pattern.length();
@@ -101,11 +92,11 @@ class PTrie {
     }
 
     // Construct the State Transition Table with the max number of states
-    STT* createSTT(int maxStates) {
+    STT* PTrie::createSTT(int maxStates) {
         STT *stt = (STT*)malloc(sizeof(STT));
         stt->numStates = 1; // Starting with initial state
         stt->table = (int **)malloc(maxStates * sizeof(int *));
-        
+
         // Allocate and initialize table for each state
         for (int i = 0; i < maxStates; i++) {
             // Default value 0 indicates no transition
@@ -117,7 +108,7 @@ class PTrie {
     }
 
     // Insert a pattern into the State Transition Table
-    void insertPattern(const char *pattern) {
+    void PTrie::insertPattern(const char *pattern) {
         int state = 0;
         for (int i = 0; pattern[i] != '\0'; i++) {
             int c = pattern[i] - 'a'; // char at index i
@@ -130,7 +121,7 @@ class PTrie {
     }
 
     // Free all STT resources
-    void freeSTT() {
+    void PTrie::freeSTT() {
         for (int i = 0; i < cur_STT->maxStates; i++) {
             free(cur_STT->table[i]);
         }
@@ -138,21 +129,31 @@ class PTrie {
         free(cur_STT);
     }
 
-    // Search function(kernel)
-    __global__ void searchKernel(STT *d_stt, char *text, int *d_match_count, int textSize) {
+// Search function(kernel)
+__global__ void searchKernel(STT *d_stt, char *text, int *d_match_count, int textSize) {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
         if (idx < textSize) {
-            int state = 0;
-            for (int i = idx; i < textSize; i++) {
-                state = d_stt->table[state][(unsigned char)text[i]];
-                if (state == 0) break; // No valid transition
-                
-                // Check if the current state is a terminal (accepting) state
-                if (d_stt->table[state][ALPHABET_SIZE] == 1) {
-                    atomicAdd(d_match_count, 1); // Atomically increment the match count
-                    break; // Exit after the first match to avoid double-counting
+		int state = 0;
+		for (int i = idx; i < textSize; i++) {
+			state = d_stt->table[state][text[i] - 'a'];
+			if (state == 0) break; // No valid transition
+
+			// Check if the current state is a terminal (accepting) state
+			if (d_stt->table[state][ALPHABET_SIZE] == 1) {
+				atomicAdd(d_match_count, 1); // Atomically increment the match count
+				//break; // Exit after the first match to avoid double-counting
+			}
+		}
+	}
+}
+
+void printTable(int** table, int numStates) {
+        for (int rol = 0; rol < numStates; rol++)
+        {
+                for (int col = 0; col <= ALPHABET_SIZE; col++)
+                {
+                        printf(" %d ", table[rol][col]);
                 }
-            }
-        }
-    }
+                printf("\n");
+	}
 }
