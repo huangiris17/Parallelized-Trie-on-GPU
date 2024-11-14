@@ -132,19 +132,39 @@ void printTable(int** table, int numStates);
 // Search function(kernel)
 __global__ void searchKernel(STT *d_stt, char *text, int *d_match_count, int textSize) {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
-        if (idx < textSize) {
-		int state = 0;
-		for (int i = idx; i < textSize; i++) {
-			state = d_stt->table[state][text[i] - 'a'];
-			if (state == 0) break; // No valid transition
+        int local_match_count = 0; // Per-thread match count
 
-			// Check if the current state is a terminal (accepting) state
-			if (d_stt->table[state][ALPHABET_SIZE] == 1) {
-				atomicAdd(d_match_count, 1); // Atomically increment the match count
-				//break; // Exit after the first match to avoid double-counting
-			}
-		}
-	}
+        // Declare shared memory for reduction
+        __shared__ int shared_match_counts[256];
+
+        if (idx < textSize) {
+                int state = 0;
+                for (int i = idx; i < textSize; i++) {
+                        state = d_stt->table[state][text[i] - 'a'];
+                        if (state == 0) break; // No valid transition
+
+                        // Check if the current state is a terminal (accepting) state
+                        if (d_stt->table[state][ALPHABET_SIZE] == 1) {
+                                local_match_count++;
+                        }
+                }
+        }
+
+        shared_match_counts[threadIdx.x] = local_match_count;
+        __syncthreads();
+
+        // Perform reduction to sum counts
+        for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+                if (threadIdx.x < stride) {
+                        shared_match_counts[threadIdx.x] += shared_match_counts[threadIdx.x + stride];
+                }
+                __syncthreads();
+        }
+
+        // One thread per block updates the global match count
+        if (threadIdx.x == 0) {
+                atomicAdd(d_match_count, shared_match_counts[0]);
+        }
 }
 
 void printTable(int** table, int numStates) {
