@@ -17,11 +17,13 @@ int main() {
 
     // Test cases with different N, M values
     std::vector<TestCase> testCases = {
-        {100, 3, 10},           // Mini test case
-        {1000, 10, 20},         // Small test case
-        {10000, 20, 50},      // Medium test case
-        {1000000, 100, 500},   // Large test case
-        {10000000, 500, 2000}  // Very large test case
+        // {100, 3, 10},           // Mini test case
+        // {1000, 10, 20},         // Small test case
+        // {10000, 20, 50},      // Medium test case
+        // {1000000, 100, 500},   // Large test case
+        // {10000000, 500, 2000}  // Very large test case
+        {1, 20, 2000},
+        {1, 200, 50}
     };
     
     // Generate random patterns

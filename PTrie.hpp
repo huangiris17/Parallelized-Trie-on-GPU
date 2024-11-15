@@ -6,7 +6,7 @@
 #include <iostream>
 // #include <cuda_runtime.h>
 
-#define ALPHABET_SIZE 26  // For lowercase letters
+#define ALPHABET_SIZE 4  // For lowercase letters
 
 // Structure for the state transition table (STT)
 struct STT {

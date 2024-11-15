@@ -9,6 +9,7 @@
 #define ALPHABET_SIZE 4  // DNA components: A,T,C,G
 
 __global__ void searchKernel(STT *d_stt, char *text, int *d_match_count, int textSize);
+__device__ __host__ int charToIndex(char c);  // Convert DNA Bases to Indices
 
 void printTable(int** table, int numStates);
 
@@ -112,7 +113,9 @@ void printTable(int** table, int numStates);
     void PTrie::insertPattern(const char *pattern) {
         int state = 0;
         for (int i = 0; pattern[i] != '\0'; i++) {
-            int c = pattern[i] - 'a'; // char at index i
+            int c = charToIndex(pattern[i]);
+            if (c == -1) continue; // Skip invalid characters
+
             if (cur_STT->table[state][c] == 0) {
                 cur_STT->table[state][c] = cur_STT->numStates++; // Add new state
             }
@@ -139,16 +142,19 @@ __global__ void searchKernel(STT *d_stt, char *text, int *d_match_count, int tex
         __shared__ int shared_match_counts[256];
 
         if (idx < textSize) {
-                int state = 0;
-                for (int i = idx; i < textSize; i++) {
-                        state = d_stt->table[state][text[i] - 'a'];
-                        if (state == 0) break; // No valid transition
+            int state = 0;
+            for (int i = idx; i < textSize; i++) {
+                int index = charToIndex(text[i]);
+                if (index == -1) break; // Stop if an invalid character is encountered
 
-                        // Check if the current state is a terminal (accepting) state
-                        if (d_stt->table[state][ALPHABET_SIZE] == 1) {
-                                local_match_count++;
-                        }
+                state = d_stt->table[state][index];
+                if (state == 0) break; // No valid transition
+
+                // Check if the current state is a terminal (accepting) state
+                if (d_stt->table[state][ALPHABET_SIZE] == 1) {
+                    local_match_count++;
                 }
+            }
         }
 
         shared_match_counts[threadIdx.x] = local_match_count;
@@ -156,16 +162,26 @@ __global__ void searchKernel(STT *d_stt, char *text, int *d_match_count, int tex
 
         // Perform reduction to sum counts
         for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
-                if (threadIdx.x < stride) {
-                        shared_match_counts[threadIdx.x] += shared_match_counts[threadIdx.x + stride];
-                }
-                __syncthreads();
+            if (threadIdx.x < stride) {
+                    shared_match_counts[threadIdx.x] += shared_match_counts[threadIdx.x + stride];
+            }
+            __syncthreads();
         }
 
         // One thread per block updates the global match count
         if (threadIdx.x == 0) {
-                atomicAdd(d_match_count, shared_match_counts[0]);
+            atomicAdd(d_match_count, shared_match_counts[0]);
         }
+}
+
+__device__ __host__ int charToIndex(char c) {
+    switch (c) {
+        case 'A': return 0;
+        case 'T': return 1;
+        case 'C': return 2;
+        case 'G': return 3;
+        default: return -1; // Invalid character
+    }
 }
 
 void printTable(int** table, int numStates) {
