@@ -6,9 +6,10 @@
 #include <cuda_runtime.h>
 #include "PTrie.hpp"
 
-#define ALPHABET_SIZE 26  // lowercase letters
+#define ALPHABET_SIZE 4  // DNA components: A,T,C,G
 
 __global__ void searchKernel(STT *d_stt, char *text, int *d_match_count, int textSize);
+
 void printTable(int** table, int numStates);
 
     // Constructor
@@ -100,7 +101,7 @@ void printTable(int** table, int numStates);
         // Allocate and initialize table for each state
         for (int i = 0; i < maxStates; i++) {
             // Default value 0 indicates no transition
-            // The extra last col is 1 if it is the end of a patter
+            // The extra last col is 1 if it is the end of a patter 
             stt->table[i] = (int *)calloc(ALPHABET_SIZE + 1, sizeof(int));
         }
 

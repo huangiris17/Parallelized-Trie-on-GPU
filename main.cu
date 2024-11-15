@@ -10,6 +10,7 @@
 int main() {
 
     // Construct a vector of pattern for testing
+    // Old patterns: {"rat", "rate", "rats", "hat", "hate", "house", "bat", "batter", "batted", "bottle"}
     std::vector<std::string> patterns = {"rat", "rate", "rats", "hat", "hate", "house", "bat", "batter", "batted", "bottle"};
 
     // Construct the PTrie instance by passing in the pre-constructed patterns

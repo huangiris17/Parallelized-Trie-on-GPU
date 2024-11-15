@@ -12,7 +12,7 @@
 struct STT {
     int numStates;           // Number of states in the STT
     int maxStates;           // Max number of states in the STT
-    int **table;             // 2D table for storing state transitions
+    int **table;             // 2D table for storing state transitions (table: a pointer pointing to an array of pointers)
 };
 
 class PTrie {
