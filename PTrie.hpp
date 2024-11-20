@@ -30,7 +30,7 @@ public:
     ~PTrie();
 
     // GPU search function for pattern matching
-    int search(const char *text, int textSize);
+    int search(const char *text, int textSize, int blockSize);
 
 private:
     // Calculate the upper bound of the number of states based on the patterns

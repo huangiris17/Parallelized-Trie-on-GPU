@@ -6,25 +6,24 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <time.h>
 #include "seq_PTrie.hpp"
-#include <time.h> 
+
 
 // Function declarations
-void runParallel(std::string textFilename, std::string patternFilename);
+void runParallel(std::string textFilename, std::string patternFilename, int blockSize);
 void runSequential(std::string textFilename, std::string patternFilename);
 std::string readTextFromFile(const std::string& filename);
 std::vector<std::string> readPatternsFromFile(const std::string& filename);
 
-// to measure time taken by a specific part of the code 
+// to measure time taken by a specific part of the code
 double time_taken;
 clock_t start, end;
 
-
 int main(int argc, char *argv[]) {
-
     // Check if the correct number of arguments are provided
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <mode> <text_filename> <pattern_filename>\n";
+    if (argc != 5) {
+        std::cerr << "Usage: " << argv[0] << " <mode> <text_filename> <pattern_filename> <blockSize>\n";
         std::cerr << "Mode: 0 for parallel, 1 for sequential\n";
         return 1;
     }
@@ -33,22 +32,29 @@ int main(int argc, char *argv[]) {
     int mode = std::stoi(argv[1]);
     std::string textFilename = argv[2];
     std::string patternFilename = argv[3];
+    int blockSize = std::stoi(argv[4]);  // Read blockSize
+
+    if (blockSize <= 0) {
+        std::cerr << "Error: blockSize must be greater than 0.\n";
+        return 1;
+    }
 
     if (mode == 0) {
         std::cout << "Running parallel implementation...\n";
-        runParallel(textFilename, patternFilename);
+	runParallel(textFilename, patternFilename, blockSize);
     } else if (mode == 1) {
         std::cout << "Running sequential implementation...\n";
-        runSequential(textFilename, patternFilename);
+	runSequential(textFilename, patternFilename);
     } else {
         std::cerr << "Invalid mode! Use 0 for parallel, 1 for sequential.\n";
         return 1;
     }
+
     return 0;
 }
 
 
-void runParallel(std::string textFilename, std::string patternFilename) {
+void runParallel(std::string textFilename, std::string patternFilename, int blockSize) {
     // std::vector<std::string> patterns = {"rat", "rate", "rats", "hat", "hate", "house", "bat", "batter", "batted", "bottle"};
     // Read input DNA sequence from a file
     std::string text = readTextFromFile(textFilename);
@@ -68,13 +74,13 @@ void runParallel(std::string textFilename, std::string patternFilename) {
     PTrie ptrie(patterns);
 
     start = clock();
-    int count = ptrie.search(text.c_str(), text.length());
+    int count = ptrie.search(text.c_str(), text.length(), blockSize);
     if (count == 0) {
         std::cout << "Pattern not found.\n";
     } else {
         std::cout << "Pattern found with count " << count << "\n";
-    }  
-    end = clock();  
+    }
+    end = clock();
     time_taken = ((double)(end - start))/ CLOCKS_PER_SEC;
     printf("Time taken = %lf\n", time_taken);
 }
@@ -107,7 +113,7 @@ void runSequential(std::string textFilename, std::string patternFilename) {
     start = clock();
     // Perform the search in the DNA text
     ac.search(text);
-    end = clock();  
+    end = clock();
     time_taken = ((double)(end - start))/ CLOCKS_PER_SEC;
     printf("Time taken = %lf\n", time_taken);
 }
@@ -144,7 +150,3 @@ std::vector<std::string> readPatternsFromFile(const std::string& filename) {
     }
     return patterns;
 }
-
-
-// nvcc -std=c++11 -o main main.cu PTrie.cu seq_PTrie.cpp
-// ./main 0 DNA_text_1000.txt Patterns_3bp_10.txt

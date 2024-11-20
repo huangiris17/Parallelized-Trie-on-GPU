@@ -31,7 +31,7 @@ PTrie::PTrie(const std::vector<std::string>& patterns) {
 }
 
 // Wrapper function to launch kernel and perform matching
-int PTrie::search(const char *text, int textSize) {
+int PTrie::search(const char *text, int textSize, int blockSize) {
     // Allocate device memory
     char *d_text;
     int *d_match_count;
@@ -74,7 +74,6 @@ int PTrie::search(const char *text, int textSize) {
     cudaCreateTextureObject(&texObj2D, &resDesc, &texDesc, nullptr);
 
     // Step 4: Launch kernel with texture object
-    int blockSize = 256;
     int gridSize = (textSize + blockSize - 1) / blockSize;
     searchKernel<<<gridSize, blockSize, blockSize * sizeof(int)>>>(texObj2D, d_text, d_match_count, textSize);  // blockSize * sizeof(int): dynamic shared memory allocation
 
@@ -113,7 +112,7 @@ STT* PTrie::createSTT(int maxStates) {
     // Allocate and initialize table for each state
     for (int i = 0; i < maxStates; i++) {
         // Default value 0 indicates no transition
-        // The extra last col is 1 if it is the end of a patter 
+        // The extra last col is 1 if it is the end of a patter
         stt->table[i] = (int *)calloc(ALPHABET_SIZE + 1, sizeof(int));
     }
 
@@ -159,7 +158,7 @@ __global__ void searchKernel(cudaTextureObject_t texObj, char *text, int *d_matc
             if (index == -1) break; // Stop if an invalid character is encountered
 
             // Fetch the next state using the 2D texture object
-            state = tex2D<int>(texObj2D, index, state);
+            state = tex2D<int>(texObj, index, state);
             if (state == 0) break;  // No valid transition
 
             // Check if the current state is a terminal (accepting) state

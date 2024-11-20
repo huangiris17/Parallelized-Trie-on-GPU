@@ -1,2 +1,12 @@
 PTrie_old.cu
 PTrie_old.hpp
+DNA_text_100.txt
+DNA_text_1000.txt
+DNA_text_10000000.txt
+Patterns_10bp_20.txt 
+Patterns_20bp_50.txt 
+Patterns_500bp_2000.txt
+DNAMain
+DNAMain.cpp
+DNAUtils.cpp
+DNAUtils.hpp
